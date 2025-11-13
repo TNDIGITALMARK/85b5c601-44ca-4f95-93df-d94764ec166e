@@ -18,7 +18,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      // For demo purposes, accept any login
+      // TODO: Implement actual authentication logic
       if (email && password) {
         router.push('/dashboard');
       } else {
@@ -98,9 +98,9 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Demo: Use any email and password to login
-            </p>
+            <Link href="/signup" className="text-sm text-[hsl(var(--primary))] hover:underline">
+              Don't have an account? Sign up
+            </Link>
           </div>
         </div>
       </div>
