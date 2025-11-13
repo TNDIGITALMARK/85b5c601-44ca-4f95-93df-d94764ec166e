@@ -1,16 +1,33 @@
 'use client';
 
-import { useState } from 'react';
-import { mockClients, getAppointmentsWithDetails } from '@/lib/mock-data';
+import { useState, useEffect } from 'react';
+import { getClients, getAppointmentsWithDetails } from '@/lib/supabase/queries';
+import { Client, AppointmentWithDetails } from '@/types/database';
 import { Calendar, Users, Bell, Settings, Search, Plus, Mail, Phone } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 
 export default function ClientsPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const appointments = getAppointmentsWithDetails();
+  const [clients, setClients] = useState<Client[]>([]);
+  const [appointments, setAppointments] = useState<AppointmentWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filteredClients = mockClients.filter(client =>
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      const [clientList, appointmentList] = await Promise.all([
+        getClients(),
+        getAppointmentsWithDetails()
+      ]);
+      setClients(clientList);
+      setAppointments(appointmentList);
+      setLoading(false);
+    }
+    fetchData();
+  }, []);
+
+  const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     client.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     client.phone?.includes(searchQuery)
@@ -109,22 +126,38 @@ export default function ClientsPage() {
 
         {/* Clients Content */}
         <div className="p-8">
-          {/* Search Bar */}
-          <div className="mb-6">
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search clients by name, email, or phone..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-[hsl(var(--border))] rounded-lg focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))] focus:border-transparent"
-              />
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-muted-foreground">Loading...</div>
             </div>
-          </div>
+          ) : clients.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">No clients yet</h3>
+              <p className="text-muted-foreground mb-6">Get started by adding your first client</p>
+              <button className="px-4 py-2 bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] rounded-lg font-medium hover:opacity-90 transition-opacity flex items-center gap-2 mx-auto">
+                <Plus className="w-4 h-4" />
+                Add Your First Client
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Search Bar */}
+              <div className="mb-6">
+                <div className="relative max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search clients by name, email, or phone..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-[hsl(var(--border))] rounded-lg focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary))] focus:border-transparent"
+                  />
+                </div>
+              </div>
 
-          {/* Client Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Client Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredClients.map(client => {
               const clientAppointments = getClientAppointments(client.id);
               const upcomingAppointments = clientAppointments.filter(
@@ -221,10 +254,13 @@ export default function ClientsPage() {
             })}
           </div>
 
-          {filteredClients.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">No clients found matching your search.</p>
-            </div>
+              {filteredClients.length === 0 && (
+                <div className="text-center py-12 col-span-full">
+                  <Search className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground">No clients found matching your search.</p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>

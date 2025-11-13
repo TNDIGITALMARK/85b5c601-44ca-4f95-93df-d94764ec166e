@@ -1,14 +1,26 @@
 'use client';
 
-import { useState } from 'react';
-import { getAppointmentsWithDetails } from '@/lib/mock-data';
+import { useState, useEffect } from 'react';
+import { getAppointmentsWithDetails } from '@/lib/supabase/queries';
+import { AppointmentWithDetails } from '@/types/database';
 import { Calendar, Users, Bell, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { format, startOfWeek, addDays, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const appointments = getAppointmentsWithDetails();
+  const [appointments, setAppointments] = useState<AppointmentWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchAppointments() {
+      setLoading(true);
+      const data = await getAppointmentsWithDetails();
+      setAppointments(data);
+      setLoading(false);
+    }
+    fetchAppointments();
+  }, []);
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);

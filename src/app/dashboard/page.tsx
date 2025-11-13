@@ -1,13 +1,33 @@
 'use client';
 
-import { getTodaysAppointments, getThisWeeksAppointments, mockClients } from '@/lib/mock-data';
+import { useEffect, useState } from 'react';
+import { getTodaysAppointments, getThisWeeksAppointments, getClients } from '@/lib/supabase/queries';
+import { AppointmentWithDetails, Client } from '@/types/database';
 import { Calendar, Users, Bell, Settings } from 'lucide-react';
 import Link from 'next/link';
-import { format, parse } from 'date-fns';
+import { format } from 'date-fns';
 
 export default function DashboardPage() {
-  const todaysAppointments = getTodaysAppointments();
-  const upcomingAppointments = getThisWeeksAppointments();
+  const [todaysAppointments, setTodaysAppointments] = useState<AppointmentWithDetails[]>([]);
+  const [upcomingAppointments, setUpcomingAppointments] = useState<AppointmentWithDetails[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      setLoading(true);
+      const [today, upcoming, clientList] = await Promise.all([
+        getTodaysAppointments(),
+        getThisWeeksAppointments(),
+        getClients()
+      ]);
+      setTodaysAppointments(today);
+      setUpcomingAppointments(upcoming);
+      setClients(clientList);
+      setLoading(false);
+    }
+    fetchData();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -96,16 +116,25 @@ export default function DashboardPage() {
 
         {/* Dashboard Content */}
         <div className="p-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Today's Appointments */}
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-xl border border-[hsl(var(--border))] p-6 shadow-card">
-                <h2 className="text-xl font-semibold mb-4">Today's Appointments</h2>
-                <div className="space-y-3">
-                  {todaysAppointments.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-8">No appointments today</p>
-                  ) : (
-                    todaysAppointments.map((apt) => (
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-muted-foreground">Loading...</div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Today's Appointments */}
+              <div className="lg:col-span-2">
+                <div className="bg-white rounded-xl border border-[hsl(var(--border))] p-6 shadow-card">
+                  <h2 className="text-xl font-semibold mb-4">Today's Appointments</h2>
+                  <div className="space-y-3">
+                    {todaysAppointments.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Calendar className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
+                        <p className="text-muted-foreground font-medium">No appointments today</p>
+                        <p className="text-sm text-muted-foreground mt-1">Create your first booking to get started</p>
+                      </div>
+                    ) : (
+                      todaysAppointments.map((apt) => (
                       <div
                         key={apt.id}
                         className="flex items-center gap-4 p-4 rounded-lg border border-[hsl(var(--border))] hover:shadow-card-hover transition-shadow"
@@ -174,26 +203,35 @@ export default function DashboardPage() {
               <div className="bg-white rounded-xl border border-[hsl(var(--border))] p-6 shadow-card">
                 <h3 className="text-lg font-semibold mb-4">Client Profiles</h3>
                 <div className="space-y-3">
-                  {mockClients.slice(0, 3).map((client) => (
-                    <div key={client.id} className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                        <span className="text-sm font-semibold text-gray-700">
-                          {client.name.split(' ').map(n => n[0]).join('')}
-                        </span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm text-foreground">{client.name}</p>
-                        <p className="text-xs text-muted-foreground">{client.phone}</p>
-                      </div>
+                  {clients.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Users className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">No clients yet</p>
                     </div>
-                  ))}
+                  ) : (
+                    clients.slice(0, 3).map((client) => (
+                      <div key={client.id} className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-semibold text-gray-700">
+                            {client.name.split(' ').map(n => n[0]).join('')}
+                          </span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-sm text-foreground">{client.name}</p>
+                          <p className="text-xs text-muted-foreground">{client.phone}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
-                <Link
-                  href="/clients"
-                  className="block text-center mt-4 text-sm text-[hsl(var(--primary))] hover:underline"
-                >
-                  View All Clients
-                </Link>
+                {clients.length > 0 && (
+                  <Link
+                    href="/clients"
+                    className="block text-center mt-4 text-sm text-[hsl(var(--primary))] hover:underline"
+                  >
+                    View All Clients
+                  </Link>
+                )}
               </div>
 
               {/* Notifications */}
@@ -218,6 +256,7 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+          )}
         </div>
       </main>
     </div>
